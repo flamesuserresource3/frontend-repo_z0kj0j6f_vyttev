@@ -1,28 +1,71 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react';
+import AuthLayout from './components/AuthLayout';
+import { LoginForm, CreateAccountForm } from './components/AuthForms';
+import HomePlaceholder from './components/HomePlaceholder';
+
+// Simple local storage based mock auth
+const STORAGE_KEY = 'mvp-auth-users';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [screen, setScreen] = useState('login'); // 'login' | 'register' | 'home'
+  const [users, setUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) setUsers(JSON.parse(raw));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+  }, [users]);
+
+  const handleCreate = ({ username, password, email, mobile }) => {
+    // basic duplicate check
+    if (users.some((u) => u.username === username)) {
+      alert('Username already exists. Please choose another.');
+      return;
+    }
+    const newUser = { username, password, email, mobile };
+    setUsers((prev) => [...prev, newUser]);
+    alert('Account created! Please sign in.');
+    setScreen('login');
+  };
+
+  const handleLogin = ({ username, password }) => {
+    const found = users.find((u) => u.username === username && u.password === password);
+    if (found) {
+      setCurrentUser(found);
+      setScreen('home');
+    } else {
+      alert('Invalid credentials.');
+    }
+  };
+
+  const handleSignOut = () => {
+    setCurrentUser(null);
+    setScreen('login');
+  };
+
+  if (screen === 'home') {
+    return <HomePlaceholder onSignOut={handleSignOut} />;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-          Vibe Coding Platform
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Your AI-powered development environment
-        </p>
-        <div className="text-center">
-          <button
-            onClick={() => setCount(count + 1)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-          >
-            Count is {count}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+    <AuthLayout>
+      {screen === 'login' ? (
+        <LoginForm
+          onSwitch={() => setScreen('register')}
+          onLogin={handleLogin}
+        />
+      ) : (
+        <CreateAccountForm
+          onSwitch={() => setScreen('login')}
+          onCreate={handleCreate}
+        />
+      )}
+    </AuthLayout>
+  );
 }
 
-export default App
+export default App;
